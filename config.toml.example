@@ -1,0 +1,7 @@
+
+[Connection]
+  LocalAddress = ":19132"
+  RemoteAddress = "play.lbsg.net:19132"
+
+[Downloader]
+  OutputDirectory = ""

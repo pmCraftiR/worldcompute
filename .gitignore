@@ -1,0 +1,13 @@
+# Credentials - never commit these
+token.tok
+
+# Personal config (contains server address)
+config.toml
+
+# Build output
+worldcompute.exe
+*.exe
+
+# Logs
+*.log
+

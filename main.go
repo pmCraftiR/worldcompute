@@ -19,7 +19,6 @@ import (
 	"github.com/sandertv/gophertunnel/minecraft/text"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -263,8 +262,12 @@ func handleConn(log *logrus.Logger, conn *minecraft.Conn, listener *minecraft.Li
 							}
 							mu.Unlock()
 
+							rawPayload, ok := entry.RawPayload.Value()
+							if !ok {
+								continue
+							}
 							var ind byte
-							newSub, err := chunk.DecodeSubChunk(bytes.NewBuffer(entry.RawPayload), c, &ind, chunk.NetworkEncoding)
+							newSub, err := chunk.DecodeSubChunk(bytes.NewBuffer(rawPayload), c, &ind, chunk.NetworkEncoding)
 							if err == nil {
 								mu.Lock()
 								c.Sub()[ind] = newSub
@@ -292,8 +295,9 @@ func handleConn(log *logrus.Logger, conn *minecraft.Conn, listener *minecraft.Li
 
 				renderer.Rerender()
 			case *packet.LevelChunk:
-				switch pk.SubChunkRequestMode {
-				case protocol.SubChunkRequestModeLegacy:
+				// In the new gophertunnel API, SubChunkRequestMode was removed.
+				// Legacy mode (inline sub-chunks in RawPayload) is indicated by SubChunkLimit not being set.
+				if _, requestMode := pk.SubChunkLimit.Value(); !requestMode {
 					go func() {
 						chunkPos := world.ChunkPos{pk.Position.X(), pk.Position.Z()}
 						c, err := chunk.NetworkDecode(airRID, pk.RawPayload, int(pk.SubChunkCount), oldFormat, dimension.Range())
@@ -358,7 +362,7 @@ func tokenSource() oauth2.TokenSource {
 		}
 	}
 	token := new(oauth2.Token)
-	tokenData, err := ioutil.ReadFile("token.tok")
+	tokenData, err := os.ReadFile("token.tok")
 	if err == nil {
 		_ = json.Unmarshal(tokenData, token)
 	} else {
@@ -374,6 +378,6 @@ func tokenSource() oauth2.TokenSource {
 	}
 	tok, _ := src.Token()
 	b, _ := json.Marshal(tok)
-	_ = ioutil.WriteFile("token.tok", b, 0644)
+	_ = os.WriteFile("token.tok", b, 0644)
 	return src
 }
